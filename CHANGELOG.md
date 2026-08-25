@@ -1,0 +1,78 @@
+# Changelog
+
+このプロジェクトに対するすべての重要な変更を記録します。
+
+フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいています。
+
+## [Unreleased]
+
+### Added
+
+- pnpm に公開直後の版を避ける cooldown（`minimumReleaseAge` 7 日）を追加（`trustLockfile: true` を併用し、既存 lockfile の再検証で `pnpm install --frozen-lockfile` が失敗するのを回避）
+- Dev Container にタスク用シークレットの Proton Pass（pass-cli）連携を追加（`pass-cli` を devcontainer イメージへ焼き込み、PAT はホストの `~/.config/proton-pass-agent/<ディレクトリ名>`（無ければ `.../pat`）からステージングしてコンテナ内へ永続化、`.devcontainer/pass-relogin` でセッション確立 + gh 認証 seed。`.env.example` に pass:// 参照の書き方サンプルを追記）
+- PR 自動ラベリングを追加（actions/labeler + `.github/labeler.yml` — ハーネス変更 PR に `meta` ラベルを自動付与。fork からの PR はスキップ、`pnpm-lock.yaml` / `.nvmrc` は対象外）
+- README にテンプレート導入チェックリスト（リネーム / LICENSE / CODEOWNERS / docs/knowledge / release-check）を追加
+- `.devcontainer/README.md` の PAT 手順に事前入力済み fine-grained PAT テンプレートのクイックリンクと `Workflows: Write` の権限行を追加
+- Dev Container に Chrome DevTools MCP + headless Chromium を追加（エージェントによる画面の見た目デバッグ用。`--no-sandbox` ラッパー経由で起動、日本語フォント同梱、Claude Code / Codex に登録）
+- Dev Container のホスト設定継承（グローバル gitignore / git identity / Claude Code の settings・statusline を `initialize.sh` でステージングし `post-start.sh` で反映）
+- `docs/knowledge/` を OKF v0.1 の知識バンドル（architecture / adr / conventions / runbooks / research のスケルトン）として追加
+- GitHub ラベルを `.github/labels.yml` から同期するワークフローを追加（`deps-update.yml` が使う `dependencies` ラベルも定義）
+- Dockerfile リント（hadolint、`lint_docker.yml`）と GitHub Actions リント（actionlint）を追加
+- Trivy による filesystem スキャンを `security.yml` に追加（PR では table 出力で fail、push/cron では SARIF を Security タブへ）
+- CycloneDX SBOM 生成ワークフロー（`sbom.yml`、cdxgen）を追加
+- Issue テンプレートを YAML issue forms へ移行し、`config.yml` で blank issue を無効化
+- `tsconfig.build.json` を分離（テスト/ベンチを除外したビルド用設定）
+- `package.json` に `engines.node`、`packageManager`、`build`、`start`、`fmt:check` を追加
+- `.editorconfig` / `.npmrc` / `.nvmrc` / `.secretlintignore` / `.gitattributes` / `.github/CODEOWNERS` を追加
+- pre-commit に `typecheck` と `secretlint` フックを追加
+- CI (`lint.yml`) に `secretlint` ステップを追加
+- `test.yml` に Node 24/25 のマトリクスを導入
+- `copilot-setup-steps.yml` に `release-check` のスモークを追加
+- `.github/copilot-instructions.md` に AGENTS.md への参照と主要コマンドを追記
+
+### Changed
+
+- PR のカバレッジコメントを生ログのコードブロックから markdown テーブルへ変更（v8 text レポーター出力の表部分だけを整形。解釈できない出力になった場合は従来どおり生ログへフォールバック。CI では text レポーターの `maxCols` を広げてファイル名の省略を防止）
+- 依存関係の自動更新頻度を weekly から monthly へ変更（dependabot の 3 エコシステムと `deps-update.yml` の cron。cron は day-of-month と day-of-week の同時指定が OR 判定になるため毎月 1 日固定）
+- 依存関係を semver レンジ内で更新（vite 8.2.2 / vitest 3.2.7 / @pandacss/dev 1.12.0 / hono 4.13.3 / @hono/node-server 2.1.1 / @ark-ui/react 5.39.0 / @tanstack/react-router 1.170.32 ほか）。あわせて `biome.json` の `$schema` を 2.5.10 へ追随
+- GitHub Actions を更新（actions/checkout 7.0.1、pnpm/action-setup 6.0.10、actions/setup-node 7.0.0、actions/labeler 7.0.0、hadolint/hadolint-action 3.4.0、astral-sh/setup-uv 9.0.0）
+- Dev Container を Docker Compose ベース構成へ移行（`.devcontainer/compose.yaml` + gitignore 済み `compose.local.yaml` オーバーライド。認証 volume はリビルドごとに増える `*-${devcontainerId}` から固定名の compose named volume へ — 移行後の初回に claude / codex / gh の再ログインが 1 回必要）
+- TypeScript を 7 系（Go 製ネイティブコンパイラ）へ更新（`typescript.tsdk` 設定を撤去し、`TypeScriptTeam.native-preview` 拡張を推奨拡張・Dev Container 拡張に追加）
+- `node:24-slim` の digest（`b31e7a4` → `cb4e8f7`）、`actions/labeler`（v6.2.0）、`astral-sh/setup-uv`（v8.3.2）を更新
+- `node:24-slim` の digest（`cb4e8f7` → `6f7b03f`）と devcontainers base の digest（`bb7b81b` → `73d85a9`）を更新
+- `tsconfig.json` を `nodenext` + `noUncheckedIndexedAccess` 等で厳格化、`types: ["node"]` を明示
+- `src/main.ts` の脆いエントリ判定を `import.meta.main`（Node 24+）に置換
+- `Dockerfile` を builder/prod に分離し、prod は `tsc` 成果物を非 root の `node` ユーザーで実行
+- `Dockerfile` のベースイメージ（`node:24-slim` / devcontainers base）を sha256 digest で固定
+- `devcontainer.json` の Features を sha256 digest で固定
+- `compose.dev.yml` にソース bind mount と `node_modules` 上書き保護を追加
+- `biome.json` で `vcs.useIgnoreFile` を有効化、`pnpm-lock.yaml` を対象外に
+- `vitest.config.ts` にカバレッジしきい値 80%、`clearMocks`/`restoreMocks`、`lcov` レポーターを設定
+- `dependabot.yml` に `docker` / `devcontainers` エコシステムと 7 日間の cooldown を追加（npm は `deps-update.yml` が担当）
+- `deps-update.yml` を `--force-with-lease` 化し、PR 作成前の検証を `pnpm test` から `pnpm release-check` に強化
+- `test.yml` の PR コメント生成を null 安全化、`FORCE_COLOR=0`/`NO_COLOR=1` で ANSI を抑止、fork からの PR ではコメントをスキップ
+- 全 workflow の Node バージョン解決を `.nvmrc` に統一
+- 全 workflow を top-level `permissions: {}` + job 単位の最小権限に統一し、`concurrency`（PR のみ cancel、ミューテーション系は直列化）と `timeout-minutes` を設定
+- `lint_gha.yml` の zizmor をバージョン固定（`uvx zizmor@1.26.1`）し、`.zizmor.yml` のポリシーを全アクション `hash-pin` に強化
+- `packageManager` を integrity ハッシュ付きで `pnpm@11.9.0` に固定
+- `@types/node` を最低サポートランタイム（Node 24）に合わせて `^24` に変更
+- `LICENSE` の年・著作権者をプレースホルダ化（派生先で置換する前提）
+
+### Fixed
+
+- `Dockerfile` の `USER node` を `USER 1000:1000` に変更（hadolint 3.4.0 で有効になった DL3066 に対応。`lint_docker.yml` の failure-threshold が info のため Dockerfile を触る PR がすべて fail していた）
+- AGENTS.md / README.md の不整合（`ES2023` → `ES2025`、存在しない `agent/`、Biome v1 表記、pre-commit フック名、古いディレクトリ構造）を修正
+- `package.json` の `scan:secrets` を `npx` から `pnpm exec` に変更（lockfile を尊重）
+- `.gitignore` に `.claude/settings.local.json` を明示
+- `.dockerignore` に `.pnpm-store` / `docs` を追加（ビルドコンテキストの肥大を解消）
+- Dev Container の `node_modules` と pnpm ストアを named volume でホストと分離（プラットフォーム固有バイナリの混在による再インストールループと、ホスト checkout への `.pnpm-store` 漏れを解消）
+
+### Removed
+
+- API キー（`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`）の `${localEnv:...}` remoteEnv パススルーを廃止（ホスト shell への平文 export が前提で、コンテナ内でも ambient に見えるため。`.env` の pass:// 参照 + `pass-cli run` によるコマンド単位注入へ移行）
+- `devcontainer.json` の冗長な `postStartCommand`
+- コントリビュート系ドキュメント（`SECURITY.md` / `CODE_OF_CONDUCT.md` / `CONTRIBUTING.md`）はテンプレートに含めない方針に変更
+
+### Security
+
+- `pnpm audit` が検出していた high 脆弱性 14 件を解消（依存更新 + `pnpm-workspace.yaml` の `overrides` で postcss を 8.5.26 へ引き上げ。@pandacss/core が postcss を厳密固定しており更新が届かないため）

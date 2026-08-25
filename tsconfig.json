@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./src/client" },
+    { "path": "./src/game" },
+    { "path": "./src/server" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}

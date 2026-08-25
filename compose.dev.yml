@@ -1,0 +1,17 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    init: true
+    # tsx --watch がホスト側のソース変更を検出できるよう bind mount
+    volumes:
+      - .:/workspace:cached
+      # コンテナ側 node_modules をホストで上書きしない
+      - /workspace/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=1
+    ports:
+      - "5173:5173" # Vite dev server
+      - "3000:3000" # Hono API
